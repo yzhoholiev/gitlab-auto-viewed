@@ -1,7 +1,7 @@
 const IDLE_LIMIT_MS = 10 * 60 * 1000;
 const SCAN_DELAY_MS = 250;
 const VIEWED_CHECKBOX = 'input[data-viewed-checkbox], input[data-testid="fileReviewCheckbox"], [data-testid="fileReviewCheckbox"] input[type="checkbox"]';
-const OBSERVED_CHANGES = { childList: true, subtree: true, attributes: true, attributeFilter: ['data-path', 'data-file-data'] };
+const OBSERVED_CHANGES = { childList: true, subtree: true, attributes: true, attributeFilter: ['data-path', 'data-file-data', 'disabled'] };
 
 const mergeRequestPath = location.pathname.match(/^.*\/-\/merge_requests\/\d+/)?.[0];
 const site = `${location.protocol}//${location.hostname}`;
@@ -146,6 +146,8 @@ function processInput(input) {
     settledInputs.set(input, null);
     return false;
   }
+  // GitLab renders the checkbox disabled until it restores the file's saved Viewed state, and click() on a disabled checkbox does nothing.
+  if (input.disabled) return false;
 
   const path = filePath(file);
   if (!path) return false;

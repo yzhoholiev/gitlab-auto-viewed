@@ -14,14 +14,23 @@ function classicDiffFile(path, lines, checked) {
   return `<div class="diff-file" data-path="${path}"><div class="file-title">${path}<input type="checkbox" data-testid="fileReviewCheckbox"${checked ? ' checked' : ''}></div><table>${diffRows(lines)}</table></div>`;
 }
 
-function htmlPage(body) {
-  return `<!doctype html><html><body><main>${body}</main><aside id="live"></aside></body></html>`;
+function htmlPage(body, script = '') {
+  return `<!doctype html><html><body><main>${body}</main><aside id="live"></aside><script>${script}</script></body></html>`;
+}
+
+/**
+ * Renders the checkboxes disabled and enables them later, the way GitLab does once it restores each file's saved Viewed state.
+ */
+function withLateCheckboxes(body, enableAfterMs) {
+  const disabled = body.replaceAll('<input type="checkbox"', '<input type="checkbox" disabled');
+  const script = `setTimeout(() => document.querySelectorAll('input[disabled]').forEach((input) => (input.disabled = false)), ${enableAfterMs});`;
+  return htmlPage(disabled, script);
 }
 
 /**
  * Serves a fake gitlab.com merge request (overview, diffs page and file list) to every page in the context.
  */
-export async function serveMergeRequest(context, { id = 1, paths, rendered = paths, viewed = [], lines = 20, view = 'rapid' }) {
+export async function serveMergeRequest(context, { id = 1, paths, rendered = paths, viewed = [], lines = 20, view = 'rapid', enableCheckboxesAfterMs }) {
   if (!servedContexts.has(context)) {
     servedContexts.add(context);
     await context.route('https://gitlab.com/**', (route) => route.fulfill({ status: 404, body: '' }));
@@ -32,7 +41,9 @@ export async function serveMergeRequest(context, { id = 1, paths, rendered = pat
   const diffFiles = paths.map((path) => ({ old_path: path, new_path: path }));
 
   await context.route(`${MERGE_REQUEST}/${id}/diffs_metadata.json*`, (route) => route.fulfill({ json: { diff_files: diffFiles } }));
-  await context.route(`${MERGE_REQUEST}/${id}/diffs`, (route) => route.fulfill({ contentType: 'text/html', body: htmlPage(body) }));
+  await context.route(`${MERGE_REQUEST}/${id}/diffs`, (route) =>
+    route.fulfill({ contentType: 'text/html', body: enableCheckboxesAfterMs === undefined ? htmlPage(body) : withLateCheckboxes(body, enableCheckboxesAfterMs) }),
+  );
   await context.route(`${MERGE_REQUEST}/${id}`, (route) => route.fulfill({ contentType: 'text/html', body: htmlPage('<p>Overview</p>') }));
   return `${MERGE_REQUEST}/${id}/diffs`;
 }

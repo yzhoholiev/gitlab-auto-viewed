@@ -19,6 +19,20 @@ test.describe('on a gitlab.com merge request', () => {
       });
     });
   }
+
+  test('waits for GitLab to enable a Viewed checkbox before ticking it', async ({ context }) => {
+    const url = await serveMergeRequest(context, { paths: PATHS, enableCheckboxesAfterMs: 1500 });
+    const page = await context.newPage();
+
+    await page.goto(url);
+
+    await expect.poll(() => viewedStates(page)).toEqual({
+      'src/A/packages.A.lock.json': true,
+      'src/A/Program.cs': false,
+      'web/pnpm-lock.yaml': true,
+      'web/src/app.ts': false,
+    });
+  });
 });
 
 test.describe('popup', () => {

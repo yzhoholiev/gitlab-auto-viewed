@@ -51,6 +51,7 @@ corepack pnpm test:e2e:install   # once per machine
 The fake GitLab in `tests/e2e/support/gitlab.js` mirrors what real pages render. Update both together when GitLab changes:
 
 - **Rapid Diffs:** `diff-file[data-file-data]`, where the JSON carries `new_path` and `old_path`, and the checkbox is `input[data-viewed-checkbox]`.
+- **Hydration:** the server renders every Viewed checkbox `disabled`. GitLab enables it, and sets its saved state from `localStorage`, only when that file hydrates, which can be seconds later. `click()` on a disabled checkbox does nothing, so the content script skips disabled boxes and observes the `disabled` attribute.
 - **Classic view:** `.diff-file[data-path]`, with the checkbox `input[data-testid="fileReviewCheckbox"]`. Older versions put the test id on a wrapper around the input. The title is `.file-title-name[title]`.
 - **File list:** `diffs_metadata.json` next to the merge request URL, requested with the page's query string.
 

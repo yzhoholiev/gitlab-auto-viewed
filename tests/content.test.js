@@ -95,6 +95,20 @@ describe('content script', () => {
     expect(parse).not.toHaveBeenCalled();
   });
 
+  it('ticks a file once GitLab enables its checkbox, not while it is still disabled', async () => {
+    const file = rapidDiff('a.lock.json');
+    const checkbox = file.querySelector('input');
+    checkbox.disabled = true;
+    loadContentScript({ metadata: ['a.lock.json'] });
+    await settle();
+    expect(viewed(file)).toBe(false);
+
+    checkbox.disabled = false;
+    await settle();
+
+    expect(viewed(file)).toBe(true);
+  });
+
   it('does not click files that are already viewed', async () => {
     const file = rapidDiff('yarn.lock', { checked: true });
     const clicks = vi.fn();
