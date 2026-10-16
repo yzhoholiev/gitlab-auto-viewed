@@ -182,7 +182,7 @@ describe('content script', () => {
     await settle();
     file.querySelector('input').checked = false;
 
-    await chrome.storage.sync.set({ patterns: '*.lock.json\n*.snap' });
+    await chrome.storage.sync.set({ patterns: [{ pattern: '*.lock.json', enabled: true }, { pattern: '*.snap', enabled: true }] });
     await settle();
 
     expect(viewed(file)).toBe(true);
@@ -248,10 +248,47 @@ describe('content script', () => {
     expect(viewed(file)).toBe(true);
   });
 
+  it('ticks only files matching a switched-on pattern', async () => {
+    const lock = rapidDiff('a.lock.json');
+    const snapshot = rapidDiff('Foo.snap');
+
+    loadContentScript({
+      storage: { patterns: [{ pattern: '*.lock.json', enabled: true }, { pattern: '*.snap', enabled: false }] },
+      metadata: ['a.lock.json', 'Foo.snap'],
+    });
+    await settle();
+
+    expect([viewed(lock), viewed(snapshot)]).toEqual([true, false]);
+  });
+
+  it('reads patterns saved as text by an earlier version', async () => {
+    const file = rapidDiff('Foo.snap');
+
+    loadContentScript({ storage: { patterns: '# mine\n*.snap' }, metadata: ['Foo.snap'] });
+    await settle();
+
+    expect(viewed(file)).toBe(true);
+  });
+
+  it('does not restart when a switched-off pattern is removed', async () => {
+    rapidDiff('a.lock.json');
+    const { chrome } = loadContentScript({
+      storage: { patterns: [{ pattern: '*.lock.json', enabled: true }, { pattern: '*.snap', enabled: false }] },
+      metadata: ['a.lock.json'],
+    });
+    await settle();
+
+    await chrome.storage.sync.set({ patterns: [{ pattern: '*.lock.json', enabled: true }] });
+    const unlistedFile = rapidDiff('b.lock.json');
+    await settle();
+
+    expect(viewed(unlistedFile)).toBe(false);
+  });
+
   it('stays idle without any active pattern', async () => {
     const file = rapidDiff('a.lock.json');
 
-    const { fetch } = loadContentScript({ storage: { patterns: '# nothing yet' }, metadata: ['a.lock.json'] });
+    const { fetch } = loadContentScript({ storage: { patterns: [{ pattern: '*.lock.json', enabled: false }] }, metadata: ['a.lock.json'] });
     await settle();
 
     expect(fetch).not.toHaveBeenCalled();

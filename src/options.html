@@ -12,7 +12,6 @@
         --text: #e6e8ee;
         --muted: #7d8590;
         --accent: #fc6d26;
-        --accent-strong: #e24329;
         --green: #3fb950;
         --red: #f85149;
         --focus: rgba(252, 109, 38, 0.35);
@@ -51,7 +50,7 @@
         background: var(--bg);
         color: var(--text);
         font: 12.5px/1.5 var(--mono);
-        font-feature-settings: 'calt', 'liga';
+        font-feature-settings: 'calt' 0, 'liga' 0;
       }
 
       header {
@@ -174,7 +173,6 @@
         color: var(--text);
       }
 
-      textarea,
       .prompt {
         width: 100%;
         background: var(--surface);
@@ -185,43 +183,14 @@
         transition: border-color 0.15s, box-shadow 0.15s;
       }
 
-      textarea {
-        display: block;
-        height: 150px;
-        scrollbar-width: thin;
-        padding: 10px 12px;
-        line-height: 1.7;
-        resize: none;
-        tab-size: 2;
-      }
-
-      textarea:focus,
       .prompt:focus-within {
         outline: none;
         border-color: var(--accent);
         box-shadow: 0 0 0 3px var(--focus);
       }
 
-      .errors {
-        margin-top: 8px;
-        padding: 8px 10px;
-        border: 1px solid var(--red);
-        border-left-width: 3px;
-        border-radius: 6px;
-        color: var(--red);
-        white-space: pre-line;
-      }
-
-      .errors:empty,
       .result:empty {
         display: none;
-      }
-
-      .actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 10px 0 14px;
       }
 
       button {
@@ -239,17 +208,6 @@
         border-color: var(--muted);
       }
 
-      button.primary {
-        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-        border-color: transparent;
-        color: #fff;
-        font-weight: 700;
-      }
-
-      button.primary:hover {
-        filter: brightness(1.08);
-      }
-
       button:focus-visible {
         outline: none;
         box-shadow: 0 0 0 3px var(--focus);
@@ -259,7 +217,6 @@
         color: var(--green);
       }
 
-      .status[data-state='pending'],
       .hosts li.disabled::before,
       .syntax > span {
         color: var(--muted);
@@ -353,6 +310,26 @@
         content: '●';
         color: var(--green);
         font-size: 9px;
+      }
+
+      .patterns {
+        max-height: 180px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+      }
+
+      .patterns .host-name {
+        overflow-wrap: anywhere;
+      }
+
+      .pattern-footer {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      .pattern-footer .link {
+        margin-top: 8px;
       }
 
       .hosts li.disabled .host-name {
@@ -518,7 +495,7 @@
           </svg>
         </button>
         <span class="bubble" id="syntaxHelp" role="tooltip">
-          <span class="bubble-title">one pattern per line</span>
+          <span class="bubble-title">one pattern per row</span>
           <span class="syntax">
             <code>*.lock.json</code><span>file name, in any folder</span>
             <code>src/**/*.cs</code><span>full path, <code>**</code> spans folders</span>
@@ -527,19 +504,23 @@
             <code>vendor/</code><span>everything in any vendor folder</span>
             <code>/vendor/</code><span>only the root vendor folder</span>
             <code>re:\.snap$</code><span>regex, anywhere in the path</span>
-            <code># note</code><span>comment, ignored</span>
           </span>
         </span>
       </span>
       <span class="badge" id="count"></span>
     </div>
-    <textarea id="patterns" spellcheck="false" aria-label="Patterns"></textarea>
-    <div id="errors" class="errors"></div>
-
-    <div class="actions">
-      <button id="save" class="primary">save</button>
-      <button id="reset">reset</button>
-      <span id="status" class="status"></span>
+    <div class="block">
+      <ul id="patternList" class="hosts patterns"></ul>
+      <form id="addPattern" class="add-host">
+        <label class="prompt">
+          <input id="patternInput" type="text" spellcheck="false" placeholder="*.snap" aria-label="New pattern" />
+        </label>
+        <button type="submit">add</button>
+      </form>
+      <div class="pattern-footer">
+        <div id="patternStatus" class="result"></div>
+        <button id="restoreDefaults" type="button" class="link">restore defaults</button>
+      </div>
     </div>
 
     <div class="section"><span class="label">try a path</span></div>

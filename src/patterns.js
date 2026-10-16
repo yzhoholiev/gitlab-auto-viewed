@@ -1,13 +1,9 @@
+const DEFAULT_PATTERNS = ['*.lock.json', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock'];
+
 const DEFAULT_SETTINGS = {
   enabled: true,
   disabledSites: [],
-  patterns: [
-    '# lock files',
-    '*.lock.json',
-    'package-lock.json',
-    'pnpm-lock.yaml',
-    'yarn.lock',
-  ].join('\n'),
+  patterns: DEFAULT_PATTERNS.map((pattern) => ({ pattern, enabled: true })),
 };
 
 function escapeRegExp(text) {
@@ -86,16 +82,28 @@ function parsePattern(line) {
   return matcher;
 }
 
-function parsePatterns(text) {
-  const matchers = [];
-  const errors = [];
-  for (const line of text.split('\n').map((l) => l.trim())) {
-    if (!line || line.startsWith('#')) continue;
+/**
+ * The stored pattern list, also reading the one-pattern-per-line text that earlier versions saved.
+ */
+function patternList(stored) {
+  if (typeof stored !== 'string') return stored;
+  return stored
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((pattern) => ({ pattern, enabled: true }));
+}
+
+function activePatterns(list) {
+  return list.filter((item) => item.enabled).map((item) => item.pattern);
+}
+
+function compilePatterns(patterns) {
+  return patterns.flatMap((pattern) => {
     try {
-      matchers.push(parsePattern(line));
-    } catch (error) {
-      errors.push(`${line}: ${error.message}`);
+      return [parsePattern(pattern)];
+    } catch {
+      return [];
     }
-  }
-  return { matchers, errors };
+  });
 }

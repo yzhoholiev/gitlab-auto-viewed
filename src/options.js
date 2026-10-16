@@ -2,11 +2,12 @@ const SAVED_MESSAGE_MS = 1500;
 
 const enabled = document.getElementById('enabled');
 const enabledLabel = document.getElementById('enabledLabel');
-const patterns = document.getElementById('patterns');
+const patternRows = document.getElementById('patternList');
+const patternForm = document.getElementById('addPattern');
+const patternInput = document.getElementById('patternInput');
+const patternStatus = document.getElementById('patternStatus');
 const count = document.getElementById('count');
-const status = document.getElementById('status');
 const enabledStatus = document.getElementById('enabledStatus');
-const errors = document.getElementById('errors');
 const sample = document.getElementById('sample');
 const sampleResult = document.getElementById('sampleResult');
 const hosts = document.getElementById('hosts');
@@ -34,10 +35,11 @@ async function saveSettings(items, target) {
   return true;
 }
 
+let shownPatterns = [];
+
 function render(settings) {
   showEnabled(settings.enabled);
-  patterns.value = settings.patterns;
-  refreshFeedback();
+  drawPatterns(patternList(settings.patterns));
 }
 
 function showEnabled(on) {
@@ -45,11 +47,7 @@ function showEnabled(on) {
   enabledLabel.textContent = on ? 'on' : 'off';
 }
 
-function refreshFeedback() {
-  const parsed = parsePatterns(patterns.value);
-  errors.textContent = parsed.errors.join('\n');
-  count.textContent = `${parsed.matchers.length} active`;
-
+function refreshSample() {
   const path = withoutLeadingSlash(sample.value.trim());
   if (!path) {
     sampleResult.textContent = '';
@@ -57,8 +55,100 @@ function refreshFeedback() {
     return;
   }
 
-  const matches = parsed.matchers.some((matcher) => matcher(path));
-  showMessage(sampleResult, matches ? 'match: would be ticked as Viewed' : 'no match', matches ? 'match' : 'none');
+  const matching = shownPatterns.filter((item) => item.matches?.(path));
+  const active = matching.find((item) => item.enabled);
+  if (active) showMessage(sampleResult, `match: ${active.pattern} ticks it as Viewed`, 'match');
+  else if (matching.length) showMessage(sampleResult, `no match: ${matching[0].pattern} would, but it is off`, 'none');
+  else showMessage(sampleResult, 'no match', 'none');
+}
+
+/**
+ * Redraws a list of rows, keeping keyboard focus on the switch that had it.
+ */
+function replaceKeepingFocus(list, rows) {
+  const focusKey = list.contains(document.activeElement) ? document.activeElement.dataset.focusKey : undefined;
+  list.replaceChildren(...rows);
+  if (focusKey) [...list.querySelectorAll('input')].find((input) => input.dataset.focusKey === focusKey)?.focus();
+}
+
+function smallSwitch(checked, label, focusKey, onChange) {
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = checked;
+  input.dataset.focusKey = focusKey;
+  input.setAttribute('aria-label', label);
+  input.addEventListener('change', () => onChange(input.checked));
+
+  const track = document.createElement('span');
+  track.className = 'track';
+
+  const switchLabel = document.createElement('label');
+  switchLabel.className = 'switch small';
+  switchLabel.append(input, track);
+  return switchLabel;
+}
+
+function rowName(text) {
+  const name = document.createElement('span');
+  name.className = 'host-name';
+  name.textContent = text;
+  return name;
+}
+
+function linkButton(text, onClick) {
+  const button = document.createElement('button');
+  button.className = 'link';
+  button.textContent = text;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+async function updatePatterns(change) {
+  const { patterns } = await chrome.storage.sync.get(DEFAULT_SETTINGS);
+  return saveSettings({ patterns: change(patternList(patterns)) }, patternStatus);
+}
+
+function withPattern(items, pattern, patternEnabled) {
+  const others = items.filter((item) => item.pattern !== pattern);
+  return items.length === others.length
+    ? [...items, { pattern, enabled: patternEnabled }]
+    : items.map((item) => (item.pattern === pattern ? { pattern, enabled: patternEnabled } : item));
+}
+
+function patternItem({ pattern, enabled: patternEnabled }) {
+  const item = document.createElement('li');
+  item.classList.toggle('disabled', !patternEnabled);
+  item.append(
+    rowName(pattern),
+    linkButton('remove', () => updatePatterns((items) => items.filter((other) => other.pattern !== pattern))),
+    smallSwitch(patternEnabled, `Tick files matching ${pattern}`, pattern, (on) => updatePatterns((items) => withPattern(items, pattern, on))),
+  );
+  return item;
+}
+
+function drawPatterns(items) {
+  shownPatterns = items.map((item) => ({ ...item, matches: compilePatterns([item.pattern])[0] }));
+  replaceKeepingFocus(patternRows, items.map(patternItem));
+  count.textContent = `${activePatterns(items).length} of ${items.length} on`;
+  refreshSample();
+}
+
+async function addPattern() {
+  const pattern = patternInput.value.trim();
+  if (!pattern) return;
+
+  try {
+    parsePattern(pattern);
+  } catch (error) {
+    showMessage(patternStatus, `${pattern}: ${error.message}`, 'error');
+    return;
+  }
+
+  if (await updatePatterns((items) => withPattern(items, pattern, true))) patternInput.value = '';
+}
+
+function withDefaultPatterns(items) {
+  return DEFAULT_PATTERNS.reduce((list, pattern) => (list.some((item) => item.pattern === pattern) ? list : withPattern(list, pattern, true)), items);
 }
 
 function withSiteEnabled(disabledSites, site, siteEnabled) {
@@ -72,20 +162,7 @@ async function setSiteEnabled(site, siteEnabled) {
 }
 
 function siteSwitch(site, label, disabledSites) {
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.checked = !disabledSites.includes(site);
-  input.dataset.site = site;
-  input.setAttribute('aria-label', `Auto-tick on ${label}`);
-  input.addEventListener('change', () => setSiteEnabled(site, input.checked));
-
-  const track = document.createElement('span');
-  track.className = 'track';
-
-  const switchLabel = document.createElement('label');
-  switchLabel.className = 'switch small';
-  switchLabel.append(input, track);
-  return switchLabel;
+  return smallSwitch(!disabledSites.includes(site), `Auto-tick on ${label}`, site, (on) => setSiteEnabled(site, on));
 }
 
 function builtInTag() {
@@ -97,10 +174,7 @@ function builtInTag() {
 
 function removeButton(origin) {
   const host = originHost(origin);
-  const remove = document.createElement('button');
-  remove.className = 'link';
-  remove.textContent = 'remove';
-  remove.addEventListener('click', async () => {
+  return linkButton('remove', async () => {
     const removed = await chrome.permissions.remove({ origins: [origin] }).catch(() => false);
     if (removed) {
       if (!(await setSiteEnabled(originSite(origin), true))) return;
@@ -109,17 +183,12 @@ function removeButton(origin) {
       showMessage(hostStatus, `could not remove site access for ${host}`, 'error');
     }
   });
-  return remove;
 }
 
 function hostItem({ site, label, action }, disabledSites) {
-  const name = document.createElement('span');
-  name.className = 'host-name';
-  name.textContent = label;
-
   const item = document.createElement('li');
   item.classList.toggle('disabled', disabledSites.includes(site));
-  item.append(name, action, siteSwitch(site, label, disabledSites));
+  item.append(rowName(label), action, siteSwitch(site, label, disabledSites));
   return item;
 }
 
@@ -130,12 +199,10 @@ function displayName(origin) {
 let latestHostsRender = 0;
 
 function drawHosts(disabledSites, origins) {
-  const focusedSite = hosts.contains(document.activeElement) ? document.activeElement.dataset.site : undefined;
-  hosts.replaceChildren(
+  replaceKeepingFocus(hosts, [
     hostItem({ site: GITLAB_COM_SITE, label: GITLAB_COM, action: builtInTag() }, disabledSites),
     ...origins.map((origin) => hostItem({ site: originSite(origin), label: displayName(origin), action: removeButton(origin) }, disabledSites)),
-  );
-  if (focusedSite) [...hosts.querySelectorAll('input')].find((input) => input.dataset.site === focusedSite)?.focus();
+  ]);
 }
 
 async function renderHosts() {
@@ -188,26 +255,17 @@ async function addHost() {
   showMessage(hostStatus, `added, reload open merge requests on ${originHost(origin)}`, 'match');
 }
 
-document.getElementById('save').addEventListener('click', () => {
-  if (parsePatterns(patterns.value).errors.length) {
-    showMessage(status, 'fix the errors above first', 'error');
-    return;
-  }
-  saveSettings({ patterns: patterns.value }, status);
-});
-
-document.getElementById('reset').addEventListener('click', () => {
-  patterns.value = DEFAULT_SETTINGS.patterns;
-  refreshFeedback();
-  showMessage(status, 'defaults loaded, save to apply', 'pending');
-});
+document.getElementById('restoreDefaults').addEventListener('click', () => updatePatterns(withDefaultPatterns));
 
 enabled.addEventListener('change', () => {
   showEnabled(enabled.checked);
   saveSettings({ enabled: enabled.checked }, enabledStatus);
 });
-patterns.addEventListener('input', refreshFeedback);
-sample.addEventListener('input', refreshFeedback);
+sample.addEventListener('input', refreshSample);
+patternForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  addPattern();
+});
 hostForm.addEventListener('submit', (event) => {
   event.preventDefault();
   addHost();
@@ -218,6 +276,7 @@ chrome.permissions.onRemoved.addListener(renderHosts);
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'sync') return;
   if (changes.disabledSites) renderHosts();
+  if (changes.patterns) drawPatterns(patternList(changes.patterns.newValue ?? DEFAULT_SETTINGS.patterns));
   if (changes.enabled) showEnabled(changes.enabled.newValue ?? DEFAULT_SETTINGS.enabled);
 });
 

@@ -44,7 +44,7 @@ describe('background', () => {
     });
 
     it.each([
-      ['patterns and site switches', (chrome) => chrome.storage.sync.set({ patterns: '*.snap', disabledSites: ['https://gitlab.acme.io'] })],
+      ['patterns and site switches', (chrome) => chrome.storage.sync.set({ patterns: [{ pattern: '*.snap', enabled: true }], disabledSites: ['https://gitlab.acme.io'] })],
       ['the toolbar icon theme', (chrome) => chrome.storage.local.set({ iconScheme: 'light' })],
     ])('leaves the badge alone when %s change', async (change, apply) => {
       const chrome = loadBackground();

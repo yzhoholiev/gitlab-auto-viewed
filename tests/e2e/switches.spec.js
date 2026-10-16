@@ -8,6 +8,13 @@ const QUIET_MS = 1000;
 
 const mainSwitch = (popup) => popup.locator('#enabled');
 const hostSwitch = (popup, host) => popup.locator('#hosts li', { hasText: host }).locator('input');
+const patternSwitch = (popup, pattern) => popup.locator('#patternList li', { hasText: pattern }).locator('input');
+
+async function addPattern(popup, pattern) {
+  await popup.locator('#patternInput').fill(pattern);
+  await popup.locator('#addPattern button').click();
+  await expect(popup.locator('#patternList li', { hasText: pattern })).toBeVisible();
+}
 
 async function flip(toggle, checked) {
   await toggle.setChecked(checked, { force: true });
@@ -100,15 +107,26 @@ test.describe('switches', () => {
     await expect.poll(() => viewedPaths(page)).toEqual([LOCK, LATER_LOCK]);
   });
 
-  test('saving patterns reruns open merge requests', async ({ context, openPopup }) => {
+  test('adding a pattern reruns open merge requests', async ({ context, openPopup }) => {
     const page = await openMergeRequest(context);
     await expect.poll(() => viewedPaths(page)).toEqual([LOCK, LATER_LOCK]);
     const popup = await openPopup();
 
-    await popup.locator('#patterns').fill('*.cs');
-    await popup.getByRole('button', { name: 'save' }).click();
+    await addPattern(popup, '*.cs');
 
     await expect.poll(() => viewedPaths(page)).toEqual([LOCK, LATER_LOCK, CODE]);
+  });
+
+  test('a switched-off pattern ticks nothing until it is switched on', async ({ context, openPopup }) => {
+    const popup = await openPopup();
+    await flip(patternSwitch(popup, 'pnpm-lock.yaml'), false);
+    await expect(popup.locator('#count')).toHaveText('3 of 4 on');
+    const page = await openMergeRequest(context);
+    await expect.poll(() => viewedPaths(page)).toEqual([LOCK]);
+
+    await flip(patternSwitch(popup, 'pnpm-lock.yaml'), true);
+
+    await expect.poll(() => viewedPaths(page)).toEqual([LOCK, LATER_LOCK]);
   });
 
   test('never un-views a file, whatever the switches and patterns do', async ({ context, openPopup }) => {
@@ -120,9 +138,9 @@ test.describe('switches', () => {
     await flip(mainSwitch(popup), true);
     await flip(hostSwitch(popup, 'gitlab.com'), false);
     await flip(hostSwitch(popup, 'gitlab.com'), true);
-    await popup.locator('#patterns').fill('*.ts');
-    await popup.getByRole('button', { name: 'save' }).click();
-    await expect(popup.locator('#status')).toHaveText('saved');
+    await flip(patternSwitch(popup, '*.lock.json'), false);
+    await flip(patternSwitch(popup, 'pnpm-lock.yaml'), false);
+    await addPattern(popup, '*.ts');
     await page.waitForTimeout(QUIET_MS);
 
     expect(await viewedPaths(page)).toEqual([LOCK, LATER_LOCK, CODE]);

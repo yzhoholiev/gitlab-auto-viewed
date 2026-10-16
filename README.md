@@ -20,6 +20,7 @@
 ## ✨ Features
 
 - Ticks **Viewed** on every file that matches your patterns: globs, `.gitignore`-style anchoring, folders or regular expressions.
+- Each pattern has its own switch, so you can turn one off for a while without removing it.
 - Works on `gitlab.com` out of the box, and on any self-hosted GitLab after one site-access prompt.
 - Supports both diff UIs: the classic diffs view and Rapid Diffs.
 - Never un-views a file. A file you untick by hand stays unticked while you review.
@@ -48,15 +49,15 @@ To update, run `git pull` on `main` or unzip a fresh download over the same fold
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/popup-dark.png">
-    <img src="docs/popup-light.png" width="400" alt="The popup: the main switch, gitlab hosts with their switches, the pattern editor and the try-a-path box">
+    <img src="docs/popup-light.png" width="400" alt="The popup: the main switch, gitlab hosts with their switches, the pattern list with its switches and the try-a-path box">
   </picture>
 </p>
 
-Click the toolbar icon to switch the extension or a host off, add a self-hosted GitLab, edit patterns and try a path against them. **Reset** only refills the editor with the defaults. Nothing changes until you press **Save**.
+Click the toolbar icon to switch the extension or a host off, add a self-hosted GitLab, and manage patterns. Each pattern is a row with its own switch and a **remove** link, and new ones go in the box below the list. Every change saves at once and reruns open merge requests. **restore defaults** adds back any missing default lock-file pattern and leaves your own patterns as they are. **try a path** shows which pattern would tick a path, including one that is switched off.
 
 ## 🧩 Patterns
 
-One pattern per line. The `?` next to **patterns** in the popup shows the same syntax.
+One pattern per row. The `?` next to **patterns** in the popup shows the same syntax.
 
 | Line | Matches |
 | --- | --- |
@@ -67,9 +68,8 @@ One pattern per line. The `?` next to **patterns** in the popup shows the same s
 | `vendor/` | Trailing slash: everything inside any `vendor` folder |
 | `/vendor/` | Leading slash too: only the root `vendor` folder (as in `.gitignore`, a slash at the start or in the middle anchors the pattern) |
 | `re:\.snap$` | Regular expression after `re:`, searched anywhere in the full path |
-| `# comment` | Ignored |
 
-Patterns that would match every file, such as `*`, `**`, `/` or an empty `re:`, are rejected, and so are `[...]` character classes. Errors show in the popup and block the save.
+Patterns that would match every file, such as `*`, `**`, `/` or an empty `re:`, are rejected, and so are `[...]` character classes. An invalid pattern is not added, and the popup says why.
 
 ## 🏠 Self-hosted GitLab
 
@@ -82,7 +82,7 @@ Open the popup, type the instance's address (or paste any URL from it) under **g
 
 ## ⚙️ How it works
 
-- **One run per page.** A file is ticked at most once per run, so unticking one by hand sticks. Reloading the page, switching the extension or the host off and on, or saving patterns starts a new run that ticks every matching file again.
+- **One run per page.** A file is ticked at most once per run, so unticking one by hand sticks. Reloading the page, switching the extension or the host off and on, or changing the switched-on patterns starts a new run that ticks every matching file again.
 - **Stops when done.** The file list comes from the page's own `diffs_metadata.json`, requested with the page's URL query. Once every matching file in it is ticked, the page stops watching.
 - **Idle stop.** The page also stops after 10 minutes without a new file. That covers an Overview tab left open, a file list that cannot be read, and files that never render. The next scroll resumes it.
 - **In-page navigation.** Opening the Changes tab or changing a diff filter restarts the page and refetches the file list. Hash-only changes, such as file-tree clicks, are ignored.
@@ -118,7 +118,7 @@ pnpm test:e2e           # browser tests, about 1 minute
 The browser suites cover:
 
 - **Behaviour** (`extension.spec.js`): both diff views, the popup, the off badge, and the toolbar icon in light and dark mode.
-- **Switches** (`switches.spec.js`): the main switch overrides host switches, switching on reruns open merge requests, a host switched off and on reruns, saved patterns rerun, and nothing that is viewed is ever un-viewed. Self-hosted hosts need a permission prompt Playwright cannot answer, so the same rules are unit-tested in `content.test.js`.
+- **Switches** (`switches.spec.js`): the main switch overrides host switches, switching on reruns open merge requests, a host switched off and on reruns, adding a pattern or switching one on reruns, and nothing that is viewed is ever un-viewed. Self-hosted hosts need a permission prompt Playwright cannot answer, so the same rules are unit-tested in `content.test.js`.
 - **Performance** (`performance.spec.js`): the V8 sampling profiler counts only time whose call stack passes through the extension's scripts. On a 400k-node diffs page the budgets are 100 ms for the first pass, 5 ms over 5 s once every file is ticked or while switched off, and 250 ms over 5 s on a 1,000-file merge request still waiting for a matching file to render. The first-pass and still-waiting budgets run in both diff views. Two more checks confirm the file list is requested once and only on the diffs view, and count the DOM change records the observer receives while files stream in, a measure that does not depend on machine speed.
 
 The extension files are plain scripts rather than modules, so `tests/support/load-scripts.js` runs them in a fresh function scope per test with the fake `chrome` passed in. Keep `node_modules` out of `src/`: Chrome refuses to load an unpacked extension containing files whose names start with `_`.

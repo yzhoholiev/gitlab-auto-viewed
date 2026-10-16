@@ -195,9 +195,11 @@ function scheduleScan() {
 function loadSettings() {
   chrome.storage.sync.get(DEFAULT_SETTINGS, (stored) => {
     const enabled = stored.enabled && !stored.disabledSites.includes(site);
-    if (settings.enabled === enabled && settings.patterns === stored.patterns) return;
+    const patterns = activePatterns(patternList(stored.patterns));
+    const patternsKey = patterns.join('\n');
+    if (settings.enabled === enabled && settings.patterns === patternsKey) return;
 
-    settings = { enabled, patterns: stored.patterns, matchers: parsePatterns(stored.patterns).matchers };
+    settings = { enabled, patterns: patternsKey, matchers: compilePatterns(patterns) };
     handledFiles.clear();
     startWatching();
   });
