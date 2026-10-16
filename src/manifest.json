@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "GitLab Auto Viewed",
+  "version": "1.0.0",
+  "homepage_url": "https://github.com/yzhoholiev/gitlab-auto-viewed",
+  "description": "Ticks \"Viewed\" on merge request files that match your patterns, such as lock files. Works on gitlab.com and self-hosted GitLab.",
+  "permissions": ["storage", "scripting", "activeTab", "offscreen"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "icons": {
+    "16": "icons/dark/icon16.png",
+    "32": "icons/dark/icon32.png",
+    "48": "icons/dark/icon48.png",
+    "128": "icons/dark/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://gitlab.com/*/-/merge_requests/*"],
+      "js": ["patterns.js", "theme.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "GitLab Auto Viewed",
+    "default_icon": {
+      "16": "icons/dark/icon16.png",
+      "32": "icons/dark/icon32.png"
+    },
+    "default_popup": "options.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}
