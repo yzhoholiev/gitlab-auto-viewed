@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GitLab Auto Viewed</title>
+    <style>
+      :root {
+        --bg: #0b0d11;
+        --surface: #12151b;
+        --surface-2: #181c24;
+        --border: #262b36;
+        --text: #e6e8ee;
+        --muted: #7d8590;
+        --accent: #fc6d26;
+        --accent-strong: #e24329;
+        --green: #3fb950;
+        --red: #f85149;
+        --focus: rgba(252, 109, 38, 0.35);
+        --mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color-scheme: dark;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f7f9;
+          --surface: #ffffff;
+          --surface-2: #f0f2f5;
+          --border: #d9dde4;
+          --text: #1b1f24;
+          --muted: #636c76;
+          --green: #1a7f37;
+          --red: #cf222e;
+          --focus: rgba(226, 67, 41, 0.25);
+          color-scheme: light;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+      }
+
+      body {
+        margin: 0;
+        width: 460px;
+        padding: 14px 16px;
+        background: var(--bg);
+        color: var(--text);
+        font: 12.5px/1.5 var(--mono);
+        font-feature-settings: 'calt', 'liga';
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+        border-bottom: 1px dashed var(--border);
+      }
+
+      header picture {
+        display: flex;
+      }
+
+      header img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .title {
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .title span {
+        color: var(--accent);
+      }
+
+      .version {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .switch {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .header-status {
+        margin-left: auto;
+        font-size: 11px;
+      }
+
+      .header-status + .switch {
+        margin-left: 8px;
+      }
+
+      .switch input {
+        position: absolute;
+        opacity: 0;
+      }
+
+      .track {
+        position: relative;
+        width: 34px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        transition: background 0.15s, border-color 0.15s;
+      }
+
+      .track::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--muted);
+        transition: transform 0.15s, background 0.15s;
+      }
+
+      .switch input:checked + .track {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .switch input:checked + .track::after {
+        transform: translateX(16px);
+        background: #fff;
+      }
+
+      .switch input:focus-visible + .track {
+        box-shadow: 0 0 0 3px var(--focus);
+      }
+
+      .section {
+        display: flex;
+        align-items: baseline;
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: lowercase;
+      }
+
+      .section::before {
+        content: '//';
+        margin-right: 6px;
+        color: var(--accent);
+      }
+
+      .section .label {
+        margin-right: 6px;
+      }
+
+      .badge {
+        margin-left: auto;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+
+      textarea,
+      .prompt {
+        width: 100%;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      textarea {
+        display: block;
+        height: 150px;
+        scrollbar-width: thin;
+        padding: 10px 12px;
+        line-height: 1.7;
+        resize: none;
+        tab-size: 2;
+      }
+
+      textarea:focus,
+      .prompt:focus-within {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--focus);
+      }
+
+      .errors {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--red);
+        border-left-width: 3px;
+        border-radius: 6px;
+        color: var(--red);
+        white-space: pre-line;
+      }
+
+      .errors:empty,
+      .result:empty {
+        display: none;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 10px 0 14px;
+      }
+
+      button {
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+      }
+
+      button:hover {
+        border-color: var(--muted);
+      }
+
+      button.primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        border-color: transparent;
+        color: #fff;
+        font-weight: 700;
+      }
+
+      button.primary:hover {
+        filter: brightness(1.08);
+      }
+
+      button:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--focus);
+      }
+
+      .status {
+        color: var(--green);
+      }
+
+      .status[data-state='pending'],
+      .hosts li.disabled::before,
+      .syntax > span {
+        color: var(--muted);
+      }
+
+      .status[data-state='error'],
+      .result[data-state='error'],
+      button.link:hover {
+        color: var(--red);
+      }
+
+      .status[data-state='saved']:not(:empty)::before {
+        content: '✓ ';
+      }
+
+      .prompt {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+      }
+
+      .prompt::before {
+        content: '$';
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .prompt input {
+        flex: 1;
+        min-width: 0;
+        padding: 9px 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        outline: none;
+      }
+
+      .result {
+        margin-top: 8px;
+        color: var(--muted);
+      }
+
+      .result[data-state='match'],
+      .result[data-state='saved'] {
+        color: var(--green);
+      }
+
+      .result[data-state='match']::before,
+      .result[data-state='saved']::before {
+        content: '✓ ';
+      }
+
+      .result[data-state='none']::before,
+      .result[data-state='error']::before {
+        content: '✗ ';
+      }
+
+      .result[data-state='hint']::before {
+        content: '→ ';
+        color: var(--accent);
+      }
+
+      .block {
+        margin-bottom: 14px;
+      }
+
+      .hosts {
+        min-height: 35px;
+        list-style: none;
+        margin: 0 0 8px;
+        padding: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .hosts li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+      }
+
+      .hosts li + li {
+        border-top: 1px solid var(--border);
+      }
+
+      .hosts li::before {
+        content: '●';
+        color: var(--green);
+        font-size: 9px;
+      }
+
+      .hosts li.disabled .host-name {
+        color: var(--muted);
+        text-decoration: line-through;
+      }
+
+      .hosts .switch {
+        margin-left: 4px;
+      }
+
+      .switch.small .track {
+        width: 26px;
+        height: 14px;
+      }
+
+      .switch.small .track::after {
+        width: 8px;
+        height: 8px;
+      }
+
+      .switch.small input:checked + .track::after {
+        transform: translateX(12px);
+      }
+
+      .tag {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      button.link {
+        margin-left: auto;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--muted);
+      }
+
+      .add-host {
+        display: flex;
+        gap: 8px;
+      }
+
+      .add-host .prompt {
+        flex: 1;
+      }
+
+      .help {
+        position: relative;
+        align-self: center;
+        text-transform: none;
+      }
+
+      .help-icon {
+        display: flex;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        cursor: help;
+      }
+
+      .help-icon:hover,
+      .help-icon:focus-visible {
+        color: var(--accent);
+        box-shadow: none;
+      }
+
+      .bubble {
+        display: none;
+        position: absolute;
+        top: calc(100% + 10px);
+        left: -60px;
+        z-index: 10;
+        width: 380px;
+        padding: 10px 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .bubble::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 61px;
+        width: 10px;
+        height: 10px;
+        background: var(--surface-2);
+        border-left: 1px solid var(--border);
+        border-top: 1px solid var(--border);
+        transform: rotate(45deg);
+      }
+
+      .help:hover .bubble,
+      .help:focus-within .bubble {
+        display: block;
+      }
+
+      .bubble-title {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+      }
+
+      .syntax {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 12px;
+        align-items: baseline;
+      }
+
+      code {
+        color: var(--text);
+        background: var(--surface-2);
+        padding: 0 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <picture>
+        <source srcset="icons/light/icon48.png" media="(prefers-color-scheme: light)" />
+        <img src="icons/dark/icon48.png" alt="" />
+      </picture>
+      <div>
+        <div class="title">gitlab<span>-</span>auto<span>-</span>viewed</div>
+        <div class="version" id="version"></div>
+      </div>
+      <span id="enabledStatus" class="status header-status"></span>
+      <label class="switch">
+        <span id="enabledLabel">on</span>
+        <input id="enabled" type="checkbox" />
+        <span class="track"></span>
+      </label>
+    </header>
+
+    <div class="block">
+      <div class="section"><span class="label">gitlab hosts</span></div>
+      <ul id="hosts" class="hosts"></ul>
+      <form id="addHost" class="add-host">
+        <label class="prompt">
+          <input id="hostInput" type="text" spellcheck="false" placeholder="gitlab.example.com" aria-label="Self-hosted GitLab address" />
+        </label>
+        <button type="submit">add</button>
+      </form>
+      <div id="hostStatus" class="result"></div>
+    </div>
+
+    <div class="section">
+      <span class="label">patterns</span>
+      <span class="help">
+        <button class="help-icon" type="button" aria-label="Pattern syntax" aria-describedby="syntaxHelp">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <circle cx="8" cy="11.9" r="0.9" fill="currentColor" />
+          </svg>
+        </button>
+        <span class="bubble" id="syntaxHelp" role="tooltip">
+          <span class="bubble-title">one pattern per line</span>
+          <span class="syntax">
+            <code>*.lock.json</code><span>file name, in any folder</span>
+            <code>src/**/*.cs</code><span>full path, <code>**</code> spans folders</span>
+            <code>/package-lock.json</code><span>repository root only</span>
+            <code>*.{yml,yaml}</code><span>either alternative</span>
+            <code>vendor/</code><span>everything in any vendor folder</span>
+            <code>/vendor/</code><span>only the root vendor folder</span>
+            <code>re:\.snap$</code><span>regex, anywhere in the path</span>
+            <code># note</code><span>comment, ignored</span>
+          </span>
+        </span>
+      </span>
+      <span class="badge" id="count"></span>
+    </div>
+    <textarea id="patterns" spellcheck="false" aria-label="Patterns"></textarea>
+    <div id="errors" class="errors"></div>
+
+    <div class="actions">
+      <button id="save" class="primary">save</button>
+      <button id="reset">reset</button>
+      <span id="status" class="status"></span>
+    </div>
+
+    <div class="section"><span class="label">try a path</span></div>
+    <label class="prompt">
+      <input id="sample" type="text" spellcheck="false" placeholder="src/Foo/packages.Foo.lock.json" aria-label="Path to test" />
+    </label>
+    <div id="sampleResult" class="result"></div>
+
+    <script src="hosts.js"></script>
+    <script src="patterns.js"></script>
+    <script src="options.js"></script>
+    <script src="theme.js"></script>
+  </body>
+</html>

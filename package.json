@@ -1,0 +1,26 @@
+{
+  "name": "gitlab-auto-viewed",
+  "version": "1.0.0",
+  "description": "Chrome / Edge extension that ticks Viewed on GitLab merge request files matching your patterns",
+  "private": true,
+  "homepage": "https://github.com/yzhoholiev/gitlab-auto-viewed#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yzhoholiev/gitlab-auto-viewed.git"
+  },
+  "bugs": "https://github.com/yzhoholiev/gitlab-auto-viewed/issues",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.12.1+sha512.b7f98934c0b1f29a65f5da52f2d7f994e7faad573ffdddea1497fb4dcb5aec051590ee7c7d95a38172b4bfae103a5b83edf2ee866e11731c2cafa96063610ac5",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "happy-dom": "21.0.1",
+    "vitest": "5.0.4"
+  }
+}
