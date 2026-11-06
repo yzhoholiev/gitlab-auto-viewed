@@ -170,11 +170,11 @@ importers:
         specifier: 1.64.1
         version: 1.64.1
       happy-dom:
-        specifier: 21.0.3
-        version: 21.0.3
+        specifier: 21.0.4
+        version: 21.0.4
       vitest:
         specifier: 5.0.5
-        version: 5.0.5(@types/node@26.6.5)(happy-dom@21.0.3)(vite@8.3.4(@types/node@26.6.5))
+        version: 5.0.5(@types/node@26.6.5)(happy-dom@21.0.4)(vite@8.3.4(@types/node@26.6.5))
 
 packages:
 
@@ -371,8 +371,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  happy-dom@21.0.3:
-    resolution: {integrity: sha512-PesNgu5BnIEmAwzKGewB3K1ORFeznFZJ4JrRz89ea1wkHnxskdpzX9sN/+zb4KO6k8oSMhyJSj/cwXAFrYBBNA==}
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
     engines: {node: '>=20.0.0'}
 
   lightningcss-android-arm64@1.33.0:
@@ -735,7 +735,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  happy-dom@21.0.3:
+  happy-dom@21.0.4:
     dependencies:
       '@types/node': 26.6.5
       '@types/whatwg-mimetype': 3.0.2
@@ -868,7 +868,7 @@ snapshots:
       '@types/node': 26.6.5
       fsevents: 2.3.3
 
-  vitest@5.0.5(@types/node@26.6.5)(happy-dom@21.0.3)(vite@8.3.4(@types/node@26.6.5)):
+  vitest@5.0.5(@types/node@26.6.5)(happy-dom@21.0.4)(vite@8.3.4(@types/node@26.6.5)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.5(vite@8.3.4(@types/node@26.6.5))
@@ -886,7 +886,7 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 26.6.5
-      happy-dom: 21.0.3
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - msw
 
